@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ویرایشگر رزومه | پیش‌نمایش زنده و دانلود PDF — رساکس</title>
+<meta name="description" content="رزومه‌ات را با پیش‌نمایش زنده A4 ویرایش کن، قالب ATS-Friendly انتخاب کن و PDF برداری رایگان دانلود کن یا پورتفولیوی آنلاین منتشر کن.">
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://resux.jx3.ir/editor.html">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<style>
+@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+</style>
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+<header class="topbar no-print">
+  <div class="container topbar-inner">
+    <a class="logo" href="index.html">
+      <span class="logo-mark">R</span>
+      <span>Resu<em>x</em></span>
+    </a>
+    <div class="topbar-actions">
+      <span class="save-state" id="saveState"><span class="dot"></span><span class="lbl"></span></span>
+      <button class="chip" id="langToggle" title="English resume">EN</button>
+      <button class="chip" id="themeToggle" title="Dark / Light">🌙</button>
+      <button class="btn btn-ghost btn-sm" id="backupBtn" title="خروجی فایل پشتیبان JSON">⬇ پشتیبان</button>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ بازگردانی<input type="file" id="restoreBtn" accept=".json,application/json" hidden></label>
+      <button class="btn btn-ghost btn-sm" id="resetBtn">شروع از نو</button>
+      <button class="btn btn-ghost btn-sm" id="publishBtn">🚀 انتشار آنلاین</button>
+      <button class="btn btn-primary btn-sm" id="printBtn">📄 دانلود PDF</button>
+    </div>
+  </div>
+</header>
+
+<div class="editor-wrap">
+  <div class="form-pane no-print">
+    <div id="formRoot"></div>
+  </div>
+
+  <div class="preview-pane">
+    <div class="preview-toolbar no-print">
+      <span class="zoom-label">A4 · 210×297mm</span>
+    </div>
+    <div class="a4-stage" id="a4Stage"></div>
+  </div>
+</div>
+
+<button class="fab-preview no-print" id="fabPreview">👁 پیش‌نمایش زنده</button>
+
+<div class="preview-overlay no-print" id="previewOverlay">
+  <div class="po-bar">
+    <strong style="color:#fff">پیش‌نمایش زنده</strong>
+    <button class="btn btn-ghost btn-sm" id="poClose" style="color:#fff;border-color:rgba(255,255,255,.3)">✕ بستن</button>
+  </div>
+  <div class="po-body" id="a4StageMobile"></div>
+</div>
+
+<div class="modal-back no-print" id="publishModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="pubTitle">🚀 انتشار پورتفولیوی آنلاین</h3><button class="x" id="modalClose">×</button></div>
+    <div class="modal-body" id="publishBody"></div>
+  </div>
+</div>
+
+<div class="toast-wrap no-print" id="toastWrap"></div>
+
+<script src="assets/js/qrcode.min.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/render.js"></script>
+<script src="assets/js/editor.js"></script>
+</body>
+</html>

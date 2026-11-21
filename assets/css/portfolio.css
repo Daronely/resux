@@ -1,0 +1,22 @@
+/* ============ Portfolio page styles ============ */
+body.pf-page { background: #eef0f7; }
+.pf-page .pf-wrap { padding-block: clamp(16px, 3vw, 36px); }
+.pf-page .a4-stage { display: flex; justify-content: center; }
+.pf-page .sheet { border-radius: 4px; box-shadow: 0 14px 44px -14px rgba(16, 20, 38, .35); }
+.pf-page .pf-toolbar { margin-block: 0 18px; }
+
+@media print {
+  @page { size: A4; margin: 0; }
+  body.pf-page { background: #fff !important; }
+  .no-print { display: none !important; }
+  .pf-page .pf-wrap { padding: 0 !important; max-width: none !important; }
+  .pf-page .a4-stage { display: block !important; }
+  .pf-page .sheet {
+    transform: none !important; margin: 0 !important; border-radius: 0 !important;
+    box-shadow: none !important;
+    width: 210mm !important; min-height: 296mm !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    page-break-after: always; break-after: page;
+  }
+  .pf-page .sheet:last-child { page-break-after: auto; break-after: auto; }
+}
