@@ -110,6 +110,8 @@ $canonical = $base . '/u/' . $slug;
     <a href="/" rel="noopener"><strong>Resux</strong></a>
     —
     <a href="/"><?= $lang === 'fa' ? 'رزومه خودت را رایگان بساز' : 'Make your resume for free' ?></a>
+    <span style="opacity:.5">·</span>
+    <a href="https://jx3.ir/" target="_blank" rel="noopener"><?= $lang === 'fa' ? 'یک محصول جارویکس' : 'a Jarvixxx product' ?></a>
   </div>
 </div>
 
