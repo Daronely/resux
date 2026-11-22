@@ -75,6 +75,8 @@ function setLang(lang, persist) {
   LANG = lang;
   document.documentElement.lang = lang;
   document.documentElement.dir = I18N[lang].dir;
+  /* keep the shared ecosystem cookie (jx3.ir family) in sync */
+  document.cookie = "jx3_lang=" + lang + "; path=/; domain=.jx3.ir; max-age=31536000; samesite=lax";
   if (persist) {
     /* switching UI language on a fresh sample → carry the sample over in the new language */
     if (lang !== prev && pristine === prev) {
@@ -487,6 +489,16 @@ async function publish() {
   const body = $("#publishBody");
   if (!modal || !body) return;
   modal.classList.add("open");
+
+  /* publishing is tied to a Jarvix Account (one account for Keepux + Resux) */
+  if (window.JarvixAccount) {
+    const user = await window.JarvixAccount.requirePublish();
+    if (!user) {
+      body.innerHTML = `<p style="color:var(--err)">${t("pubAccount")}</p>`;
+      return;
+    }
+  }
+
   body.innerHTML = `<p>${t("pubDoing")}</p>`;
 
   const payload = {
