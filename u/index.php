@@ -1,21 +1,24 @@
 <?php
 /**
- * Resux — public portfolio viewer /u/{slug}
- * Renders a stored resume as an SEO-friendly web page with the same 4 templates.
- * This file lives at /u/index.php and reads the slug from REQUEST_URI.
+ * Resux v2 — public portfolio viewer /u/{slug}
+ * Renders a stored resume as an SEO-friendly page with any of the 10 templates.
  */
 
 declare(strict_types=1);
 define('RESUX_DB', __DIR__ . '/../../resux_data/resux.sqlite');
 
+const RESUX_TEMPLATES = ['classic','modern','creative','compact','minimal','executive','elegant','timeline','bold','terminal'];
+
 function fail404(): never {
     http_response_code(404);
     header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>پورتفولیو پیدا نشد — رساکس</title><style>body{font-family:system-ui,sans-serif;background:#f4f6fb;color:#101426;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}div{background:#fff;border:1px solid #e3e7f0;border-radius:18px;padding:44px 36px;max-width:420px;box-shadow:0 10px 30px -18px rgba(0,0,0,.25)}h1{font-size:1.4rem;margin:0 0 10px}p{color:#5b6478;line-height:1.9;margin:0 0 20px}a{display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;padding:11px 26px;border-radius:12px;font-weight:700}</style></head><body><div><h1>این پورتفولیو پیدا نشد 😕</h1><p>لینک اشتباه است یا این رزومه مدت‌ها بازدید نشده و حذف شده است.<br>می‌توانید رزومه خودتان را رایگان بسازید:</p><a href="/">ساخت رزومه رایگان با رساکس</a></div></body></html>';
+    $fa = <<<HTML
+    <!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>پورتفولیو پیدا نشد — رساکس</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/assets/css/main.css"><link rel="stylesheet" href="/assets/css/portfolio.css"></head><body class="pf-page"><main class="pf-404"><div class="box"><h1>این پورتفولیو پیدا نشد 😕</h1><p>لینک اشتباه است یا این رزومه مدت‌ها بازدید نشده و حذف شده است.<br>می‌توانید رزومه خودتان را رایگان بسازید:</p><a class="btn btn-primary" href="/">ساخت رزومه رایگان با رساکس</a></div></main></body></html>
+    HTML;
+    echo $fa;
     exit;
 }
 
-/* extract slug: /u/abc123(/)? */
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $path = parse_url($uri, PHP_URL_PATH) ?: '';
 $slug = '';
@@ -28,7 +31,7 @@ if (preg_match('#^/u/([a-z0-9]{6})/?$#i', $path, $m)) {
 if (!is_file(RESUX_DB)) fail404();
 $db = new SQLite3(RESUX_DB);
 $db->busyTimeout(3000);
-$st = $db->prepare('SELECT data, views FROM resumes WHERE slug = ? LIMIT 1');
+$st = $db->prepare('SELECT data FROM resumes WHERE slug = ? LIMIT 1');
 $st->bindValue(1, $slug, SQLITE3_TEXT);
 $r = $st->execute()->fetchArray(SQLITE3_ASSOC);
 if (!$r) fail404();
@@ -36,18 +39,18 @@ if (!$r) fail404();
 $resume = json_decode($r['data'], true);
 if (!is_array($resume)) fail404();
 
-/* count the visit (skip reloads from same IP within an hour is overkill; simple counter) */
-$db->exec('UPDATE resumes SET views = views + 1, last_visit = ' . time() . ' WHERE slug = \'' . $slug . '\'');
+/* count the visit */
+$db->exec('UPDATE resumes SET views = views + 1, last_visit = ' . time() . ' WHERE slug = ' . $db->escapeString($slug));
 
-$lang    = ($resume['meta']['lang'] ?? 'fa') === 'en' ? 'en' : 'fa';
-$template = in_array($resume['meta']['template'] ?? 'classic', ['classic', 'modern', 'creative', 'compact'], true)
+$lang     = ($resume['meta']['lang'] ?? 'fa') === 'en' ? 'en' : 'fa';
+$template = in_array($resume['meta']['template'] ?? 'classic', RESUX_TEMPLATES, true)
     ? $resume['meta']['template'] : 'classic';
 $name  = trim($resume['personal']['name'] ?? '');
 $title = trim($resume['personal']['title'] ?? '');
 $dir   = $lang === 'fa' ? 'rtl' : 'ltr';
 
 $siteName = $lang === 'fa' ? 'رساکس' : 'Resux';
-$pageTitle = ($name ?: 'رزومه') . ($title ? ' — ' . $title : '') . ' | ' . $siteName;
+$pageTitle = ($name ?: ($lang === 'fa' ? 'رزومه' : 'Resume')) . ($title ? ' — ' . $title : '') . ' | ' . $siteName;
 $desc = mb_substr(trim($resume['about'] ?? ($lang === 'fa' ? 'رزومه آنلاین' : 'Online resume')), 0, 150);
 $base = 'https://resux.jx3.ir';
 $canonical = $base . '/u/' . $slug;
@@ -61,25 +64,19 @@ $canonical = $base . '/u/' . $slug;
 <meta name="description" content="<?= htmlspecialchars($desc, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="<?= $canonical ?>">
-<meta name="theme-color" content="#4f46e5">
-<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
 <meta property="og:type" content="profile">
 <meta property="og:site_name" content="<?= $siteName ?>">
+<meta property="og:locale" content="<?= $lang === 'fa' ? 'fa_IR' : 'en_US' ?>">
 <meta property="og:title" content="<?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:description" content="<?= htmlspecialchars($desc, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:url" content="<?= $canonical ?>">
 <meta property="og:image" content="<?= $base ?>/assets/img/og-cover.png">
 <meta name="twitter:card" content="summary_large_image">
-<style>
-@font-face { font-family: 'Vazirmatn'; src: url('../assets/fonts/Vazirmatn-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Vazirmatn'; src: url('../assets/fonts/Vazirmatn-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
-@font-face { font-family: 'Vazirmatn'; src: url('../assets/fonts/Vazirmatn-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('../assets/fonts/Inter-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('../assets/fonts/Inter-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('../assets/fonts/Inter-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-</style>
-<link rel="stylesheet" href="../assets/css/main.css">
-<link rel="stylesheet" href="../assets/css/portfolio.css">
+<link rel="preload" href="/assets/fonts/<?= $lang === 'fa' ? 'Vazirmatn-VF.woff2' : 'SpaceGrotesk-VF.woff2' ?>" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="stylesheet" href="/assets/css/portfolio.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -115,9 +112,9 @@ $canonical = $base . '/u/' . $slug;
   </div>
 </div>
 
-<script src="../assets/js/qrcode.min.js"></script>
-<script src="../assets/js/data.js"></script>
-<script src="../assets/js/render.js"></script>
+<script src="/assets/js/qrcode.min.js"></script>
+<script src="/assets/js/data.js"></script>
+<script src="/assets/js/render.js"></script>
 <script>
 (function () {
   var resume = <?= json_encode($resume, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;

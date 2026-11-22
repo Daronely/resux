@@ -4,38 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ویرایشگر رزومه | پیش‌نمایش زنده و دانلود PDF — رساکس</title>
-<meta name="description" content="رزومه‌ات را با پیش‌نمایش زنده A4 ویرایش کن، قالب ATS-Friendly انتخاب کن و PDF برداری رایگان دانلود کن یا پورتفولیوی آنلاین منتشر کن.">
+<meta name="description" content="رزومه‌ات را با پیش‌نمایش زنده A4 ویرایش کن، بین ۱۰ قالب حرفه‌ای و رنگ دلخواه انتخاب کن و PDF برداری رایگان دانلود کن یا پورتفولیوی آنلاین منتشر کن.">
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="https://resux.jx3.ir/editor.html">
-<meta name="theme-color" content="#4f46e5">
+<meta name="theme-color" content="#0b0d12">
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-<style>
-@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Medium.woff2') format('woff2'); font-weight: 500; font-display: swap; }
-@font-face { font-family: 'Vazirmatn'; src: url('assets/fonts/Vazirmatn-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
-@font-face { font-family: 'Inter'; src: url('assets/fonts/Inter-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
-</style>
+<link rel="preload" href="assets/fonts/Vazirmatn-VF.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Estedad-VF.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
 
 <header class="topbar no-print">
   <div class="container topbar-inner">
-    <a class="logo" href="index.html">
+    <a class="logo" href="index.html" aria-label="Resux">
       <span class="logo-mark">R</span>
       <span>Resu<em>x</em></span>
     </a>
     <div class="topbar-actions">
       <span class="save-state" id="saveState"><span class="dot"></span><span class="lbl"></span></span>
       <button class="chip" id="langToggle" title="English resume">EN</button>
-      <button class="chip" id="themeToggle" title="Dark / Light">🌙</button>
-      <button class="btn btn-ghost btn-sm" id="backupBtn" title="خروجی فایل پشتیبان JSON">⬇ پشتیبان</button>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ بازگردانی<input type="file" id="restoreBtn" accept=".json,application/json" hidden></label>
-      <button class="btn btn-ghost btn-sm" id="resetBtn">شروع از نو</button>
-      <button class="btn btn-ghost btn-sm" id="publishBtn">🚀 انتشار آنلاین</button>
-      <button class="btn btn-primary btn-sm" id="printBtn">📄 دانلود PDF</button>
+      <button class="btn btn-ghost btn-sm" id="backupBtn">⬇ <span data-i18n="backupBtn">پشتیبان</span></button>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ <span data-i18n="restoreBtn">بازگردانی</span><input type="file" id="restoreBtn" accept=".json,application/json" hidden></label>
+      <button class="btn btn-ghost btn-sm" id="resetBtn"><span data-i18n="resetBtn">شروع از نو</span></button>
+      <button class="btn btn-ghost btn-sm" id="publishBtn">🚀 <span data-i18n="publishBtn">انتشار آنلاین</span></button>
+      <button class="btn btn-primary btn-sm" id="printBtn">📄 <span data-i18n="printBtn">دانلود PDF</span></button>
     </div>
   </div>
 </header>
@@ -47,25 +40,26 @@
 
   <div class="preview-pane">
     <div class="preview-toolbar no-print">
-      <span class="zoom-label">A4 · 210×297mm</span>
+      <span>A4 · 210×297mm</span>
+      <span id="zoomLabel" style="margin-inline-start:auto"></span>
     </div>
     <div class="a4-stage" id="a4Stage"></div>
   </div>
 </div>
 
-<button class="fab-preview no-print" id="fabPreview">👁 پیش‌نمایش زنده</button>
+<button class="fab-preview no-print" id="fabPreview">👁 <span data-i18n="livePreview">پیش‌نمایش زنده</span></button>
 
 <div class="preview-overlay no-print" id="previewOverlay">
   <div class="po-bar">
-    <strong style="color:#fff">پیش‌نمایش زنده</strong>
-    <button class="btn btn-ghost btn-sm" id="poClose" style="color:#fff;border-color:rgba(255,255,255,.3)">✕ بستن</button>
+    <strong data-i18n="livePreview" style="color:var(--ink)">پیش‌نمایش زنده</strong>
+    <button class="btn btn-ghost btn-sm" id="poClose">✕ <span data-i18n="close">بستن</span></button>
   </div>
   <div class="po-body" id="a4StageMobile"></div>
 </div>
 
 <div class="modal-back no-print" id="publishModal">
   <div class="modal">
-    <div class="modal-head"><h3 id="pubTitle">🚀 انتشار پورتفولیوی آنلاین</h3><button class="x" id="modalClose">×</button></div>
+    <div class="modal-head"><h3 id="pubTitle">🚀 <span data-i18n="pubTitle">انتشار پورتفولیوی آنلاین</span></h3><button class="x" id="modalClose">×</button></div>
     <div class="modal-body" id="publishBody"></div>
   </div>
 </div>
@@ -76,5 +70,22 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/render.js"></script>
 <script src="assets/js/editor.js"></script>
+<script>
+/* translate static toolbar labels + keep zoom label fresh */
+document.addEventListener("DOMContentLoaded", () => {
+  const apply = () => {
+    const F = I18N[document.documentElement.lang === "en" ? "en" : "fa"];
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const v = F[el.dataset.i18n];
+      if (v) el.textContent = v;
+    });
+    document.title = F.editorTitle + " | " + (F.langToggleTitle === "رزومه فارسی" ? "رساکس" : "Resux");
+  };
+  apply();
+  /* re-apply after each setLang rebuild */
+  const obs = new MutationObserver(apply);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+});
+</script>
 </body>
 </html>

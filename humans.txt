@@ -1,0 +1,12 @@
+/* the team behind Resux */
+
+__SITE:      https://resux.jx3.ir
+__LANGUAGE:  Persian / English
+__STACK:     Vanilla HTML, CSS, JS · PHP 8 · SQLite · qrcode.js
+
+__MAKER:     Daronely
+__MAKER_URL: https://github.com/Daronely
+
+__FONTS:     Vazirmatn · Estedad · Space Grotesk · Syne (SIL OFL)
+
+A Jarvixxx product — built in the Metora flow.

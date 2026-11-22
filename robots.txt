@@ -3,8 +3,14 @@ Allow: /
 Disallow: /api/
 Disallow: /editor.html
 
-# AI crawlers welcome
+# AI crawlers welcome — Resux sample resumes are public teaching material
 User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
 Allow: /
 
 Sitemap: https://resux.jx3.ir/sitemap.xml

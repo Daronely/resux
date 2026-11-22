@@ -1,4 +1,4 @@
-/* ============ Resux — Editor Engine ============ */
+/* ============ Resux — Editor Engine v2 ============ */
 "use strict";
 
 /* ---------- state ---------- */
@@ -21,13 +21,25 @@ function loadState() {
     if (raw) { DATA = JSON.parse(raw); }
   } catch (e) { DATA = null; }
   if (!DATA) DATA = JSON.parse(JSON.stringify(SAMPLE_FA));
-  DATA.meta = DATA.meta || { lang: "fa", template: "classic", showQr: false, qrTarget: "auto" };
+  DATA.meta = DATA.meta || { lang: "fa", template: "classic", accent: "#4338ca", showQr: false, qrTarget: "auto" };
+  if (!TEMPLATE_IDS.includes(DATA.meta.template)) DATA.meta.template = "classic";
+  if (!ACCENTS.includes(DATA.meta.accent)) DATA.meta.accent = "#4338ca";
   DATA.personal = DATA.personal || {};
   DATA.experience = DATA.experience || [];
   DATA.education = DATA.education || [];
   DATA.skills = DATA.skills || [];
   DATA.languages = DATA.languages || [];
   DATA.custom = DATA.custom || [];
+
+  /* ?job=xxx → load job sample (from landing pages) */
+  const job = new URLSearchParams(location.search).get("job");
+  if (job && JOB_SAMPLES.fa[job]) {
+    DATA = JSON.parse(JSON.stringify(JOB_SAMPLES.fa[job]));
+    localStorage.setItem(RESUX.storageKey, JSON.stringify(DATA));
+  }
+  /* ?template=xxx → just switch the template */
+  const tplParam = new URLSearchParams(location.search).get("template");
+  if (tplParam && TEMPLATE_IDS.includes(tplParam)) DATA.meta.template = tplParam;
 }
 
 function scheduleSave() {
@@ -49,9 +61,8 @@ function setSaveState(s) {
 /* ---------- language ---------- */
 function setLang(lang, persist) {
   LANG = lang;
-  const dir = I18N[lang].dir;
   document.documentElement.lang = lang;
-  document.documentElement.dir = dir;
+  document.documentElement.dir = I18N[lang].dir;
   if (persist) {
     DATA.meta.lang = lang;
     scheduleSave();
@@ -87,7 +98,6 @@ function applyZoom() {
   CURRENT_ZOOM = z;
   sheet.style.transform = `scale(${z})`;
   sheet.style.transformOrigin = "top center";
-  // compensate layout height
   sheet.style.marginBottom = (sheet.scrollHeight * (z - 1)) + "px";
 }
 
@@ -95,57 +105,85 @@ function applyZoom() {
 function field(labelTxt, inputHtml, hint) {
   return `<div class="field"><label>${labelTxt}</label>${inputHtml}${hint ? `<div class="hint">${hint}</div>` : ""}</div>`;
 }
-
 function txt(id, val, ph) {
   return `<input type="text" data-bind="${id}" value="${esc(val || "")}" placeholder="${esc(ph || "")}">`;
 }
-
 function area(id, val, ph, rows) {
-  return `<textarea data-bind="${id}" rows="${rows || 4}" placeholder="${esc(ph || "")}">${esc(val || "")}</textarea>`;
+  return `<textarea data-bind="${id}" rows="${rows || 3}" placeholder="${esc(ph || "")}">${esc(val || "")}</textarea>`;
 }
-
 function bindInput(el) {
   const path = el.dataset.bind;
-  el.addEventListener("input", () => {
-    setPath(DATA, path, el.type === "checkbox" ? el.checked : el.value);
+  const isCheck = el.type === "checkbox";
+  const evt = el.tagName === "SELECT" || isCheck ? "change" : "input";
+  el.addEventListener(evt, () => {
+    setPath(DATA, path, isCheck ? el.checked : el.value);
     scheduleSave();
-    renderPreview();
+    if (path.startsWith("personal") || path === "about") renderPreview();
   });
+  el.addEventListener("blur", renderPreview);
 }
-
 function setPath(obj, path, val) {
   const parts = path.split(".");
   let o = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const m = parts[i].match(/^(.+)\[(\d+)\]$/);
-    if (m) o = o[m[1]][+m[2]]; else o = o[parts[i]];
+    o = m ? o[m[1]][+m[2]] : o[parts[i]];
   }
   const last = parts[parts.length - 1];
-  const m = last.match(/^(.+)\[(\d+)\]$/);
-  if (m) o[m[1]][+m[2]] = val; else o[last] = val;
+  const lm = last.match(/^(.+)\[(\d+)\]$/);
+  if (lm) o[lm[1]][+lm[2]] = val; else o[last] = val;
+}
+function getPath(obj, path) {
+  const parts = path.split(".");
+  let o = obj;
+  for (const part of parts) {
+    const m = part.match(/^(.+)\[(\d+)\]$/);
+    o = m ? o[m[1]][+m[2]] : o[part];
+    if (o == null) return "";
+  }
+  return o;
+}
+function snippetsRow(kind, targetPath) {
+  const pack = (SNIPPETS[DATA.meta.lang === "en" ? "en" : "fa"][kind] || {});
+  const keys = Object.keys(pack);
+  if (!keys.length) return "";
+  const labels = {
+    developer: "دولوپر", designer: "طراح", accountant: "حسابدار", sales: "فروش", teacher: "مدرس",
+    nurse: "پرستار", marketer: "مارکتر", manager: "مدیر", engineer: "مهندس", intern: "کارآموز",
+    achievement1: "دستاورد ۱", achievement2: "دستاورد ۲", achievement3: "دستاورد ۳",
+    achievement4: "دستاورد ۴", achievement5: "دستاورد ۵", achievement6: "دستاورد ۶",
+    dev1: "توسعه ۱", dev2: "توسعه ۲", design1: "طراحی", sales1: "فروش", office1: "اداری",
+  };
+  return `<div class="snippets"><span style="font-size:.72rem;color:var(--muted);align-self:center">${t("snippetsTitle")}</span>${
+    keys.map(k => `<button type="button" data-snippet-for="${targetPath}" data-text="${esc(pack[k])}">${labels[k] || k}</button>`).join("")
+  }</div>`;
 }
 
-function snippetsRow(kind, targetPath) {
-  const bank = SNIPPETS[DATA.meta.lang === "en" ? "en" : "fa"][kind];
-  const map = {
-    about: Object.values(bank).slice(0, 5),
-    exp: Object.values(bank).slice(0, 6),
-  };
-  const list = map[kind] || Object.values(bank).slice(0, 6);
-  return `<div class="snippets"><span class="hint" style="align-self:center">${t("snippetsTitle")}</span>${list.map(s =>
-    `<button type="button" class="snippet" data-snippet-for="${targetPath}" data-text="${esc(s)}">${esc(s.length > 46 ? s.slice(0, 46) + "…" : s)}</button>`).join("")}</div>`;
+/* ---------- template picker (10 templates + accent) ---------- */
+function tplThumbMini(id) {
+  const ln = (w, cls) => `<div class="ln ${cls || ""}" style="width:${w}%"></div>`;
+  switch (id) {
+    case "classic":   return ln(55, "dark") + ln(35, "brand") + ln(90) + ln(75) + ln(85) + ln(60);
+    case "modern":    return `<div class="sidebar"></div><div class="mini" style="inset:10% 12% 10% 42%">${ln(70, "brand")}${ln(50, "dark")}${ln(90)}${ln(70)}${ln(80)}</div>`;
+    case "creative":  return `<div class="topband"></div><div class="mini" style="inset:32% 12% 10%">${ln(60)}${ln(90)}${ln(75)}${ln(50)}</div>`;
+    case "compact":   return ln(45, "dark") + ln(70) + ln(80) + ln(90) + ln(60) + ln(75);
+    case "minimal":   return ln(85, "serif") + ln(60) + ln(90) + ln(75) + ln(40);
+    case "executive": return ln(75, "serif") + ln(45, "dark") + ln(90) + ln(85) + ln(65);
+    case "elegant":   return `<div class="band"></div><div class="mini" style="inset:24% 12% 10%">${ln(50, "dark")}${ln(85)}${ln(70)}${ln(60, "brand")}</div>`;
+    case "timeline":  return `<div class="tl-line"></div><div class="tl-dot" style="top:28%"></div><div class="tl-dot" style="top:48%"></div><div class="tl-dot" style="top:68%"></div><div class="mini" style="inset:22% 12% 10% 58%">${ln(80, "dark")}${ln(90)}${ln(70)}${ln(85)}</div>`;
+    case "bold":      return `<div class="band" style="height:22%"></div><div class="mini" style="inset:30% 12% 10%">${ln(90, "brand")}${ln(60)}${ln(80)}${ln(70)}</div>`;
+    case "terminal":  return `<div class="tm-bar"></div><div class="mini" style="inset:16% 12% 10%">${ln(85, "dark")}${ln(60, "brand")}${ln(90)}${ln(75)}${ln(80)}</div>`;
+    default:          return ln(55, "dark") + ln(90) + ln(75);
+  }
 }
 
 function buildForm() {
   const root = $("#formRoot");
   if (!root) return;
   const d = DATA;
-  const T = I18N.fa; // form labels follow UI language
   const F = I18N[LANG];
-
   root.innerHTML = "";
 
-  /* -- accordion helper -- */
   function acc(id, n, title, bodyHtml, open) {
     return `<div class="acc ${open ? "open" : ""}" id="acc-${id}">
       <button type="button" class="acc-head" data-acc><span class="n">${n}</span>${title}<span class="chev">▾</span></button>
@@ -160,7 +198,7 @@ function buildForm() {
     ${field(F.fTitle, txt("personal.title", p.title, LANG === "fa" ? "مثلاً توسعه‌دهنده فرانت‌اند" : "e.g. Frontend Developer"))}
     <div class="field-row">
       ${field(F.fEmail, txt("personal.email", p.email, "you@mail.com"))}
-      ${field(F.fPhone, txt("personal.phone", p.phone, "۰۹۱۲…"))}
+      ${field(F.fPhone, txt("personal.phone", p.phone, LANG === "fa" ? "۰۹۱۲…" : "+98…"))}
     </div>
     <div class="field-row">
       ${field(F.fLocation, txt("personal.location", p.location, LANG === "fa" ? "تهران" : "Tehran"))}
@@ -171,7 +209,7 @@ function buildForm() {
 
   /* 2 — about */
   root.insertAdjacentHTML("beforeend", acc("about", 2, F.secAbout, `
-    ${field(F.fAbout, area("about", d.about, LANG === "fa" ? "۲ تا ۴ جمله درباره خودت…" : "2–4 sentences about you…"), null)}
+    ${field(F.fAbout, area("about", d.about, LANG === "fa" ? "۲ تا ۴ جمله درباره خودت…" : "2–4 sentences about you…"))}
     ${snippetsRow("about", "about")}
     <div class="hint">${F.fAboutHint}</div>
   `, true));
@@ -245,9 +283,7 @@ function buildForm() {
   const lngHtml = d.languages.map((x, i) => `
     <div class="item-card" data-lg="${i}">
       <div class="item-head"><span>${i + 1}.</span>
-        <div class="actions">
-          <button type="button" class="icon-btn" data-rm="languages,${i}">✕</button>
-        </div>
+        <div class="actions"><button type="button" class="icon-btn" data-rm="languages,${i}">✕</button></div>
       </div>
       <div class="field-row">
         ${field(F.fLang, txt(`languages[${i}].name`, x.name))}
@@ -273,29 +309,22 @@ function buildForm() {
     `<button type="button" class="add-btn" data-add="custom">${F.addSection}</button>`;
   root.insertAdjacentHTML("beforeend", acc("custom", 7, F.secCustom, csHtml, false));
 
-  /* 8 — design & settings */
-  const tplThumbs = [
-    ["classic", F.tplClassic, F.tplClassicD],
-    ["modern", F.tplModern, F.tplModernD],
-    ["creative", F.tplCreative, F.tplCreativeD],
-    ["compact", F.tplCompact, F.tplCompactD],
-  ].map(([id, name, desc]) => `
-    <div class="tpl-card ${d.meta.template === id ? "selected" : ""}" data-tpl="${id}">
-      <div class="tpl-thumb">${id === "modern" ? `<div class="sidebar"></div>` : ""}
-        <div class="mini">
-          ${id === "classic" ? `<div class="ln dark" style="width:55%"></div><div class="ln brand" style="width:35%"></div>` : ""}
-          ${id === "modern" ? `<div class="ln brand" style="width:70%"></div><div class="ln dark" style="width:50%"></div>` : ""}
-          ${id === "creative" ? `<div class="ln brand" style="width:85%;height:9px;border-radius:6px"></div><div class="ln" style="width:60%"></div>` : ""}
-          ${id === "compact" ? `<div class="ln dark" style="width:45%"></div><div class="ln" style="width:70%"></div><div class="ln" style="width:80%"></div>` : ""}
-          <div class="ln" style="width:90%"></div><div class="ln" style="width:75%"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:60%"></div>
-        </div>
-      </div>
+  /* 8 — design: 10 templates + accent picker */
+  const tplThumbs = TEMPLATE_LIST.map(tl => {
+    const [name, desc] = LANG === "fa" ? tl.fa : tl.en;
+    return `<div class="tpl-card ${d.meta.template === tl.id ? "selected" : ""}" data-tpl="${tl.id}" role="button" tabindex="0" aria-pressed="${d.meta.template === tl.id}">
+      <div class="tpl-thumb">${tplThumbMini(tl.id)}</div>
       <div class="tpl-body"><strong>${name}</strong><span>${desc}</span></div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
+
+  const accentDots = ACCENTS.map(a =>
+    `<button type="button" class="accent-dot ${d.meta.accent === a ? "selected" : ""}" style="background:${a}" data-accent="${a}" title="${a}" aria-label="${a}"></button>`).join("");
 
   root.insertAdjacentHTML("beforeend", acc("design", 8, F.secDesign, `
-    <div class="field"><label>${F.tplChoose}</label><div class="templates-grid" style="grid-template-columns:1fr 1fr">${tplThumbs}</div></div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;font-weight:600;margin:12px 0 6px">
+    <div class="field"><label>${F.tplChoose}</label><div class="templates-grid">${tplThumbs}</div></div>
+    <div class="field"><label>${F.accentChoose}</label><div class="accent-row">${accentDots}</div></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;font-weight:600;margin:14px 0 6px">
       <input type="checkbox" id="qrToggle" ${d.meta.showQr ? "checked" : ""}> ${F.showQR}
     </label>
     <div class="field" id="qrTargetField" style="display:${d.meta.showQr ? "block" : "none"}">
@@ -337,12 +366,10 @@ function buildForm() {
     }[k];
     DATA[k].push(JSON.parse(JSON.stringify(tpl)));
     scheduleSave(); buildForm(); renderPreview();
-    // open the accordion it belongs to and scroll into view
-    const map = { experience: "experience", education: "education", skills: "skills", languages: "languages", custom: "custom" };
-    const accEl = $("#acc-" + map[k]);
+    const accEl = $("#acc-" + k);
     if (accEl) {
       accEl.classList.add("open");
-      const cards = $$(`[data-${map[k]}]`, accEl);
+      const cards = $$(`[data-${k === "custom" ? "cs" : k.slice(0, 3)}]`, accEl).filter(el => el.matches(".item-card"));
       const last = cards[cards.length - 1];
       if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -355,10 +382,20 @@ function buildForm() {
     const el = $(`[data-bind="${path}"]`, root);
     if (el) el.focus();
   }));
-  $$("[data-tpl]", root).forEach(c => c.addEventListener("click", () => {
-    DATA.meta.template = c.dataset.tpl;
+  $$("[data-tpl]", root).forEach(c => {
+    const pick = () => {
+      DATA.meta.template = c.dataset.tpl;
+      scheduleSave();
+      $$("[data-tpl]", root).forEach(x => { x.classList.toggle("selected", x === c); x.setAttribute("aria-pressed", x === c); });
+      renderPreview();
+    };
+    c.addEventListener("click", pick);
+    c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  $$("[data-accent]", root).forEach(dot => dot.addEventListener("click", () => {
+    DATA.meta.accent = dot.dataset.accent;
     scheduleSave();
-    $$("[data-tpl]", root).forEach(x => x.classList.toggle("selected", x === c));
+    $$("[data-accent]", root).forEach(x => x.classList.toggle("selected", x === dot));
     renderPreview();
   }));
 
@@ -380,23 +417,9 @@ function buildForm() {
   });
 }
 
-function getPath(obj, path) {
-  const parts = path.split(".");
-  let o = obj;
-  for (const part of parts) {
-    const m = part.match(/^(.+)\[(\d+)\]$/);
-    if (m) o = o[m[1]][+m[2]]; else o = o[part];
-    if (o == null) return "";
-  }
-  return o;
-}
-
 /* ---------- print ---------- */
 function printResume() {
-  // ensure preview (which contains #printArea) is in DOM & up to date
   renderPreview();
-  // If we're on mobile (preview pane hidden), temporarily open overlay content isn't needed:
-  // #printArea exists in the hidden preview pane; visibility rules in @media print handle the rest.
   window.print();
 }
 
@@ -408,7 +431,7 @@ function backupJson() {
   a.download = "resux-backup-" + new Date().toISOString().slice(0, 10) + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(LANG === "fa" ? "فایل پشتیبان دانلود شد" : "Backup downloaded", "ok");
+  toast(t("toastBackup"), "ok");
 }
 
 function restoreJson(file) {
@@ -419,28 +442,28 @@ function restoreJson(file) {
       if (!d.personal || !d.meta) throw new Error("bad");
       DATA = d;
       DATA.meta = DATA.meta || {};
+      if (!TEMPLATE_IDS.includes(DATA.meta.template)) DATA.meta.template = "classic";
       scheduleSave();
       setLang(DATA.meta.lang === "en" ? "en" : "fa", false);
-      toast(LANG === "fa" ? "اطلاعات بازگردانی شد" : "Restored", "ok");
+      toast(t("toastRestored"), "ok");
     } catch (e) {
-      toast(LANG === "fa" ? "فایل نامعتبر است" : "Invalid file", "err");
+      toast(t("toastInvalid"), "err");
     }
   };
   r.readAsText(file);
 }
 
 function resetAll() {
-  if (!confirm(LANG === "fa" ? "همه اطلاعات پاک شود و از نو شروع کنیم؟" : "Erase everything and start over?")) return;
+  if (!confirm(t("confirmReset"))) return;
   localStorage.removeItem(RESUX.storageKey);
   DATA = JSON.parse(JSON.stringify(SAMPLE_FA));
   setLang("fa", false);
   scheduleSave();
-  toast(LANG === "fa" ? "از نو شروع کردیم" : "Started over", "ok");
+  toast(t("toastReset"), "ok");
 }
 
 /* ---------- publish ---------- */
 async function publish() {
-  const btn = $("#publishBtn");
   const modal = $("#publishModal");
   const body = $("#publishBody");
   if (!modal || !body) return;
@@ -459,9 +482,9 @@ async function publish() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const j = await res.json();
+    const j = await res.json().catch(() => ({}));
     if (!res.ok || !j.ok) {
-      body.innerHTML = `<p>${res.status === 429 ? t("pubRate") : t("pubErr")}</p>`;
+      body.innerHTML = `<p style="color:var(--err)">${res.status === 429 ? t("pubRate") : t("pubErr")}</p>`;
       return;
     }
     PUBLISHED = { slug: j.slug, key: j.key };
@@ -485,9 +508,9 @@ async function publish() {
       });
     }));
     $$("[data-close]", body).forEach(b => b.addEventListener("click", () => modal.classList.remove("open")));
-    renderPreview(); // QR auto mode may now have a URL
+    renderPreview();
   } catch (e) {
-    body.innerHTML = `<p>${t("pubErr")}</p>`;
+    body.innerHTML = `<p style="color:var(--err)">${t("pubErr")}</p>`;
   }
 }
 
@@ -514,14 +537,6 @@ function bootEditor() {
   $("#restoreBtn").addEventListener("change", e => { if (e.target.files[0]) restoreJson(e.target.files[0]); e.target.value = ""; });
   $("#resetBtn").addEventListener("click", resetAll);
   $("#langToggle").addEventListener("click", () => setLang(LANG === "fa" ? "en" : "fa", true));
-  $("#themeToggle").addEventListener("click", () => {
-    const html = document.documentElement;
-    const dark = html.dataset.theme === "dark";
-    html.dataset.theme = dark ? "" : "dark";
-    localStorage.setItem("resux.theme", dark ? "light" : "dark");
-  });
-  const savedTheme = localStorage.getItem("resux.theme");
-  if (savedTheme === "dark") document.documentElement.dataset.theme = "dark";
 
   const fab = $("#fabPreview");
   const ov = $("#previewOverlay");
