@@ -59,12 +59,31 @@ function setSaveState(s) {
 }
 
 /* ---------- language ---------- */
+/* detect if current data is still untouched FA sample → swap to EN sample on lang switch */
+function isPristineSample() {
+  const s = JSON.stringify;
+  const cur = DATA;
+  if (s(cur) === s(SAMPLE_FA)) return "fa";
+  if (s(cur) === s(SAMPLE_EN)) return "en";
+  /* also treat a freshly loaded job sample as pristine-ish (user hasn't typed yet) */
+  return null;
+}
+
 function setLang(lang, persist) {
+  const prev = LANG;
+  const pristine = isPristineSample();
   LANG = lang;
   document.documentElement.lang = lang;
   document.documentElement.dir = I18N[lang].dir;
   if (persist) {
-    DATA.meta.lang = lang;
+    /* switching UI language on a fresh sample → carry the sample over in the new language */
+    if (lang !== prev && pristine === prev) {
+      DATA = JSON.parse(JSON.stringify(lang === "en" ? SAMPLE_EN : SAMPLE_FA));
+      DATA.meta.lang = lang;
+      PUBLISHED = null; // old portfolio slug no longer matches this data
+    } else {
+      DATA.meta.lang = lang;
+    }
     scheduleSave();
   }
   buildForm();

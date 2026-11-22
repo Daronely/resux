@@ -22,6 +22,7 @@
       <span>Resu<em>x</em></span>
     </a>
     <div class="topbar-actions">
+      <a class="btn-back" href="index.html" id="backBtn" title="بازگشت به صفحه اصلی"><span class="arr">→</span> <span data-i18n="backBtn">بازگشت</span></a>
       <span class="save-state" id="saveState"><span class="dot"></span><span class="lbl"></span></span>
       <button class="chip" id="langToggle" title="English resume">EN</button>
       <button class="btn btn-ghost btn-sm" id="backupBtn">⬇ <span data-i18n="backupBtn">پشتیبان</span></button>
@@ -80,6 +81,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (v) el.textContent = v;
     });
     document.title = F.editorTitle + " | " + (F.langToggleTitle === "رزومه فارسی" ? "رساکس" : "Resux");
+    const back = document.getElementById("backBtn");
+    if (back) {
+      back.title = F.backBtnTitle || back.title;
+      back.setAttribute("href", document.documentElement.dir === "rtl" ? "index.html" : "en.html");
+    }
   };
   apply();
   /* re-apply after each setLang rebuild */
